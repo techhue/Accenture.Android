@@ -1,5 +1,8 @@
+
 GitHub Repository
-___________________________________________
+______________________________________________
+	https://github.com/HariPrasadSala/WapApp
+	https://github.com/Bibhukalyan/WarAppV1
 	https://github.com/techhue/Accenture.Android
 
 	Download Following Android Code and Unzip It
@@ -29,6 +32,7 @@ ___________________________________________
 		
 		Android.Code3 > Project05
 			Project.05.01.Intents
+			Project.05.02.Linkify
 			Project.05.03.BoadcastIntents
 
 
@@ -58,6 +62,11 @@ Day 4:
 	https://developer.android.com/reference/android/app/Activity
 	https://developer.android.com/guide/components/fragments
 
+Day 6:
+	https://developer.android.com/guide/components/fragments
+	https://developer.android.com/guide/components/intents-filters
+	https://developer.android.com/guide/components/broadcasts
+	https://developer.android.com/guide/components/broadcast-exceptions.html
 
 Android Application Architecture
 ___________________________________________
@@ -129,5 +138,128 @@ Unless you specify otherwise, a configuration change (such as a change in screen
 This is done because any application resource, including layout files, can change based on any configuration value. Thus the only safe way to handle a configuration change is to re-retrieve all resources, including layouts, drawables, and strings. Because activities must already know how to save their state and re-create themselves from that state, this is a convenient way to have an activity restart itself with a new configuration.
 
 In some special cases, you may want to bypass restarting of your activity based on one or more types of configuration changes. This is done with the android:configChanges attribute in its manifest. For any types of configuration changes you say that you handle there, you will receive a call to your current activity's onConfigurationChanged(Configuration) method instead of being restarted. If a configuration change involves any that you do not handle, however, the activity will still be restarted and onConfigurationChanged(Configuration) will not be called.
+
+
+___________________________________________
+
+/**
+ * Base class for activities that use the
+ * <a href="{@docRoot}tools/extras/support-library.html">support library</a> action bar features.
+ *
+ * <p>You can add an {@link androidx.appcompat.app.ActionBar} to your activity when running on API level 7 or higher
+ * by extending this class for your activity and setting the activity theme to
+ * {@link androidx.appcompat.R.style#Theme_AppCompat Theme.AppCompat} or a similar theme.
+ *
+ * <div class="special reference">
+ * <h3>Developer Guides</h3>
+ *
+ * <p>For information about how to use the action bar, including how to add action items, navigation
+ * modes and more, read the <a href="{@docRoot}guide/topics/ui/actionbar.html">Action
+ * Bar</a> API guide.</p>
+ * </div>
+ */
+public class AppCompatActivity extends FragmentActivity implements AppCompatCallback,
+        TaskStackBuilder.SupportParentable, ActionBarDrawerToggle.DelegateProvider {
+
+___________________________________________
+Broadcast Reciever
+___________________________________________
+
+Android apps(compoents) can send or receive broadcast messages from the Android system and other Android apps, similar to the 
+	publish-subscribe design pattern. 
+	---------------------------------
+These broadcasts are sent when an event of interest occurs. 
+
+For example, the Android system sends broadcasts when various system events occur, 
+	such as when the system boots up or the device starts charging. 
+	Apps can also send custom broadcasts, 
+		for example, to notify other apps of something that they might be interested in 
+			(for example, some new data has been downloaded).
+
+___________________________________________
+Intent and Intent Filters
+___________________________________________
+
+An Intent is a messaging object you can use to request an action from another app component. Although intents facilitate communication between components in several ways, there are three fundamental use cases:
+
+___________________________________________
+onSaveInstanceState
+___________________________________________
+
+/**
+ * Called to retrieve per-instance state from an activity before being killed
+ * so that the state can be restored in {@link #onCreate} or
+ * {@link #onRestoreInstanceState} (the {@link Bundle} populated by this method
+ * will be passed to both).
+ *
+ 
+ * <p>This method is called before an activity may be killed so that when it
+ * comes back some time in the future it can restore its state.  
+
+ For example,
+ * if activity B is launched in front of activity A, and at some point activity
+ * A is killed to reclaim resources, activity A will have a chance to save the
+ * current state of its user interface via this method so that when the user
+ * returns to activity A, the state of the user interface can be restored
+ * via {@link #onCreate} or {@link #onRestoreInstanceState}.
+
+
+ *
+ * <p>Do not confuse this method with activity lifecycle callbacks such as
+ * {@link #onPause}, which is always called when an activity is being placed
+ * in the background or on its way to destruction, or {@link #onStop} which
+ * is called before destruction.  
+
+
+ One example of when {@link #onPause} and
+ * {@link #onStop} is called and not this method is when a user navigates back
+ * from activity B to activity A: there is no need to call {@link #onSaveInstanceState} * on B because that particular instance will never be restored, so the system avoids calling it.  
+
+ An example when {@link #onPause} is called and
+ * not {@link #onSaveInstanceState} is when activity B is launched in front of activity A: the system may avoid calling {@link #onSaveInstanceState} on activity A if it isn't killed during the lifetime of B since the state of the user interface of
+ 
+ * A will stay intact.
+ *
+ * <p>The default implementation takes care of most of the UI per-instance
+ * state for you by calling {@link android.view.View#onSaveInstanceState()} on each
+ * view in the hierarchy that has an id, and by saving the id of the currently
+ * focused view (all of which is restored by the default implementation of
+ * {@link #onRestoreInstanceState}).  If you override this method to save additional
+ * information not captured by each individual view, you will likely want to
+ * call through to the default implementation, otherwise be prepared to save
+ * all of the state of each view yourself.
+ *
+ * <p>If called, this method will occur after {@link #onStop} for applications
+ * targeting platforms starting with {@link android.os.Build.VERSION_CODES#P}.
+ * For applications targeting earlier platform versions this method will occur
+ * before {@link #onStop} and there are no guarantees about whether it will
+ * occur before or after {@link #onPause}.
+ *
+ * @param outState Bundle in which to place your saved state.
+ *
+ * @see #onCreate
+ * @see #onRestoreInstanceState
+ * @see #onPause
+ */
+protected void onSaveInstanceState(Bundle outState) {
+
+/**
+ * This is the same as {@link #onSaveInstanceState} but is called for activities
+ * created with the attribute {@link android.R.attr#persistableMode} set to
+ * <code>persistAcrossReboots</code>. The {@link android.os.PersistableBundle} passed
+ * in will be saved and presented in {@link #onCreate(Bundle, PersistableBundle)}
+ * the first time that this activity is restarted following the next device reboot.
+ *
+ * @param outState Bundle in which to place your saved state.
+ * @param outPersistentState State which will be saved across reboots.
+ *
+ * @see #onSaveInstanceState(Bundle)
+ * @see #onCreate
+ * @see #onRestoreInstanceState(Bundle, PersistableBundle)
+ * @see #onPause
+ */
+public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
+    onSaveInstanceState(outState);
+}
 
 
