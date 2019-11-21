@@ -123,6 +123,8 @@ ___________________________________________
 	Never Ever Mess with Ownership Design
 4. Design Towards Localization
 	Never Ever Violate Locationzation Principles
+5. Name is An Idea! Never Mess With It!
+6. You Should Not Pay For It! If You Are Not Using It!
 
 ___________________________________________
 
@@ -641,6 +643,89 @@ ___________________________________________
 See the Toast Notifications or Status Bar Notifications developer guides for more information.
 
 
+______________________________________________
+Accessing a provider
+______________________________________________
 
+	When you want to access data in a content provider, you use the ContentResolver object in your application's Context to communicate with the provider as a client. 
+
+	The ContentResolver object communicates with the provider object, an instance of a class that implements ContentProvider.
+
+	 The provider object receives data requests from clients, performs the requested action, and returns the results. 
+
+	 This object has methods that call identically-named methods in the provider object, an instance of one of the concrete subclasses of ContentProvider. 
+
+	 The ContentResolver methods provide the basic "CRUD" (create, retrieve, update, and delete) functions of persistent storage
+
+
+______________________________________________
+CursorLoader: Does CRUD IN Background Threads
+______________________________________________
+
+	A common pattern for accessing a ContentProvider from your UI uses a CursorLoader to run an asynchronous query in the background. 
+
+	The Activity or Fragment in your UI call a CursorLoader to the query, which in turn gets the ContentProvider using the ContentResolver. 
+
+	Note: 
+	To access a provider, your application usually has to request specific permissions in its manifest file. This development pattern is described in more detail in the section Content Provider Permissions.
+
+	Content URIs
+	A content URI is a URI that identifies data in a provider. 
+
+	Content URIs include the symbolic name of the entire provider (its authority) and a name that points to a table (a path). 
+
+	When you call a client method to access a table in a provider, the content URI for the table is one of the arguments.
+
+______________________________________________
+Data access via intents
+______________________________________________
+
+	Intents can provide indirect access to a content provider. 
+
+		You allow the user to access data in a provider even if your application doesn't have access permissions, 
+
+		either by getting a result intent back from an application that has permissions, 
+
+		or by activating an application that has permissions and letting the user do work in it.
+
+
+	Getting access with temporary permissions
+		You can access data in a content provider, even if you don't have the proper access permissions, 
+
+		by sending an intent to an application that does have the permissions and receiving back a result intent containing "URI" permissions. 
+
+		These are permissions for a specific content URI that last until the activity that receives them is finished. 
+
+		The application that has permanent permissions grants temporary permissions by setting a flag in the result intent:
+
+			Read permission: FLAG_GRANT_READ_URI_PERMISSION
+			Write permission: FLAG_GRANT_WRITE_URI_PERMISSION
+
+Note: These flags don't give general read or write access to the provider whose authority is contained in the content URI. The access is only for the URI itself.
+
+
+A provider defines URI permissions for content URIs in its manifest, 
+
+	using the android:grantUriPermission attribute
+		 of the <provider> element, as well as the 
+		 <grant-uri-permission> child element of the <provider> element
+
+		 The URI permissions mechanism is explained in more detail in the Permissions overview guide.
+
+
+For Example: 
+	you can retrieve data for a contact in the Contacts Provider, 
+	even if you don't have the READ_CONTACTS permission. 
+
+	You might want to do this in an application that sends e-greetings to a contact on their birthday. 
+
+	Instead of requesting READ_CONTACTS, which gives you access to all of the user's contacts and all of their information, you prefer to let the user control which contacts are used by your application. To do this, you use the following process:
+______________________________________________
+Contract Classes
+______________________________________________
+
+	A contract class defines constants that help applications work with the content URIs, column names, intent actions, and other features of a content provider. 
+
+	Contract classes are not included automatically with a provider; the provider's developer has to define them and then make them available to other developers. Many of the providers included with the Android platform have corresponding contract classes in the package android.provider.
 
 
