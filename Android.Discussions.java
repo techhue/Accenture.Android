@@ -102,7 +102,8 @@ Day 8:
 
 Day 9:
 	https://developer.android.com/guide/components/processes-and-threads
-
+	https://developer.android.com/reference/android/os/AsyncTask.html
+	
 	Operating Systems: Internals and Design Principles
 		by William Stallin
 		Read: Chapter 3 - Process Description and Control
@@ -886,4 +887,266 @@ ______________________________________________
 	When deciding how to classify a process, the system will base its decision on the most important level found among all the components currently active in the process. See the Activity, Service, and BroadcastReceiver documentation for more detail on how each of these components contribute to the overall life-cycle of a process. The documentation for each of these classes describes in more detail how they impact the overall life-cycle of their application.
 
 	A process's priority may also be increased based on other dependencies a process has to it. For example, if process A has bound to a Service with the Context.BIND_AUTO_CREATE flag or is using a ContentProvider in process B, then process B's classification will always be at least as important as process A's.
+
+
+______________________________________________
+Threads in Android
+______________________________________________
+
+When an application is launched, the system creates a thread of execution for the application, called "main." This thread is very important because it is in charge of dispatching events to the appropriate user interface widgets, including drawing events. 
+
+	It is also almost always the thread in which your application interacts with components from the Android UI toolkit (components from the android.widget and android.view packages). 
+
+	As such, the main thread is also sometimes called the UI thread. However, under special circumstances, an app's main thread might not be its UI thread; for more information, see Thread annotations.
+
+The system does not create a separate thread for each instance of a component. All components that run in the same process are instantiated in the UI thread, and system calls to each component are dispatched from that thread. 
+
+	Consequently, methods that respond to system callbacks (such as onKeyDown() to report user actions or a lifecycle callback method) always run in the UI thread of the process.
+
+
+For instance, when the user touches a button on the screen, your app's UI thread dispatches the touch event to the widget, which in turn sets its pressed state and posts an invalidate request to the event queue. The UI thread dequeues the request and notifies the widget that it should redraw itself.
+
+When your app performs intensive work in response to user interaction, this single thread model can yield poor performance unless you implement your application properly. 
+
+Specifically, if everything is happening in the UI thread, performing long operations such as network access or database queries will block the whole UI. When the thread is blocked, no events can be dispatched, including drawing events. From the user's perspective, the application appears to hang. Even worse, if the UI thread is blocked for more than a few seconds (about 5 seconds currently) the user is presented with the infamous "application not responding" (ANR) dialog. The user might then decide to quit your application and uninstall it if they are unhappy.
+
+
+VERY IMPORTANT
+	Additionally, the Android UI toolkit is not thread-safe. So, you must not manipulate your UI from a worker thread—you must do all manipulation to your user interface from the UI thread. Thus, there are simply two rules to Android's single thread model:
+
+	Do not block the UI thread
+	Do not access the Android UI toolkit from outside the UI thread
+
+
+	Worker threads
+		Because of the single threaded model described above, it's vital to the responsiveness of your application's UI that you do not block the UI thread. If you have operations to perform that are not instantaneous, you should make sure to do them in separate threads ("background" or "worker" threads).
+
+		However, note that you cannot update the UI from any thread other than the UI thread or the "main" thread.
+
+		To fix this problem, Android offers several ways to access the UI thread from other threads. Here is a list of methods that can help:
+
+		Activity.runOnUiThread(Runnable)
+		View.post(Runnable)
+		View.postDelayed(Runnable, long)
+
+______________________________________________
+Using AsyncTask
+______________________________________________
+	AsyncTask allows you to perform asynchronous work on your user interface. It performs the blocking operations in a worker thread and then publishes the results on the UI thread, without requiring you to handle threads and/or handlers yourself.
+
+	To use it, you must subclass AsyncTask and implement the doInBackground() callback method, which runs in a pool of background threads. To update your UI, you should implement onPostExecute(), which delivers the result from doInBackground() and runs in the UI thread, so you can safely update your UI. You can then run the task by calling execute() from the UI thread.
+
+	You should read the AsyncTask reference for a full understanding on how to use this class.
+
+	AsyncTask's generic types
+	-------------------------
+		The three types used by an asynchronous task are the following:
+
+		Params, the type of the parameters sent to the task upon execution.
+		Progress, the type of the progress units published during the background computation.
+		Result, the type of the result of the background computation.
+		Not all types are always used by an asynchronous task. To mark a type as unused, simply use the type Void:
+
+
+______________________________________________
+Android Security Tips and Practices
+______________________________________________
+
+	Android has built-in security features that significantly reduce the frequency and impact of application security issues. 
+
+		The system is designed so that you can typically build your apps with the default system and file permissions and avoid difficult decisions about security.
+
+	The following core security features help you build secure apps:
+
+		The Android Application Sandbox, which isolates your app data and code execution from other apps.
+
+		An application framework with robust implementations of common security functionality such as cryptography, permissions, and secure IPC.
+
+		Technologies like ASLR, NX, ProPolice, safe_iop, OpenBSD dlmalloc, OpenBSD calloc, and Linux mmap_min_addr to mitigate risks associated with common memory management errors.
+
+		An encrypted file system that can be enabled to protect data on lost or stolen devices.
+
+		User-granted permissions to restrict access to system features and user data.
+
+		Application-defined permissions to control application data on a per-app basis.
+
+Store data
+______________________________________________
+	The most common security concern for an application on Android is whether the data that you save on the device is accessible to other apps. There are three fundamental ways to save data on the device:
+
+		Internal storage.
+		External storage.
+		Content providers.
+
+
+		Use internal storage
+		--------------------
+		
+		By default, files that you create on internal storage are accessible only to your app. Android implements this protection, and it's sufficient for most applications.
+
+			Generally, avoid the MODE_WORLD_WRITEABLE or MODE_WORLD_READABLE modes for IPC files because they do not provide the ability to limit data access to particular applications, nor do they provide any control of data format. 
+
+			If you want to share your data with other app processes, instead consider using a content provider, which offers read and write permissions to other apps and can make dynamic permission grants on a case-by-case basis.
+
+			To provide additional protection for sensitive data, you can encrypt local files using the Security library. This measure can provide protection for a lost device without file system encryption.
+
+		Use external storage
+		---------------------
+
+			Files created on external storage, such as SD cards, are globally readable and writable. Because external storage can be removed by the user and also modified by any application, don't store sensitive information using external storage.
+
+			To read and write files on external storage in a more secure way, consider using the Security library, which provides the EncryptedFile class.
+
+			You should Perform input validation when handling data from external storage as you would with data from any untrusted source. 
+
+				You should not store executables or class files on external storage prior to dynamic loading. 
+
+				If your app does retrieve executable files from external storage, the files should be signed and cryptographically verified prior to dynamic loading.
+
+		Use content providers
+		---------------------
+		Content providers offer a structured storage mechanism that can be limited to your own application or exported to allow access by other applications. 
+
+			If you do not intend to provide other applications with access to your ContentProvider, mark them as android:exported=false in the application manifest.
+
+			 Otherwise, set the android:exported attribute to true to allow other apps to access the stored data.
+
+		When creating a ContentProvider that is exported for use by other applications, 
+
+			you can specify a single permission for reading and writing, or you can specify distinct permissions for reading and writing. 
+
+			You should limit your permissions to those required to accomplish the task at hand. Keep in mind that it’s usually easier to add permissions later to expose new functionality than it is to take them away and impact existing users.
+
+		If you are using a content provider for sharing data between only your own apps, 
+			
+			it is preferable to use the android:protectionLevel attribute set to signature protection. 
+
+				Signature permissions do not require user confirmation, so they provide a better user experience and more controlled access to the content provider data when the apps accessing the data are signed with the same key.
+
+		Content providers can also provide more granular access 
+
+			by declaring the android:grantUriPermissions attribute 
+				and using the FLAG_GRANT_READ_URI_PERMISSION and FLAG_GRANT_WRITE_URI_PERMISSION flags in the Intent object that activates the component. 
+
+				The scope of these permissions can be further limited by the <grant-uri-permission> element.
+
+			When accessing a content provider, use parameterized query methods such as query(), update(), and delete() 
+				to avoid potential SQL injection from untrusted sources. 
+				Note that using parameterized methods is not sufficient if the selection argument is built by concatenating user data prior to submitting it to the method.
+
+			Don't have a false sense of security about the write permission. 
+
+				The write permission allows SQL statements that make it possible for some data to be confirmed using creative WHERE clauses and parsing the results. 
+
+				For example, an attacker might probe for the presence of a specific phone number in a call log by modifying a row only if that phone number already exists. 
+
+				If the content provider data has predictable structure, the write permission may be equivalent to providing both reading and writing.
+
+______________________________________________
+Use permissions
+______________________________________________
+	Because Android sandboxes applications from each other, applications must explicitly share resources and data. 
+
+	They do this by declaring the permissions they need for additional capabilities not provided by the basic sandbox, including access to device features such as the camera.
+
+	Request permissions
+	-------------------
+	You should minimize the number of permissions that your app requests. 
+
+		Restricting access to sensitive permissions reduces the risk of inadvertently misusing those permissions, improves user adoption, and makes your app less vulnerable for attackers. 
+		Generally, if a permission is not required for your app to function, don't request it. If there is a feature that the app can't run without, declare it using a <uses-feature> element in the manifest file.
+
+		If it's possible to design your application in a way that does not require any permissions, that is preferable. 
+
+		For example, 
+			Rather than requesting access to device information to create a unique identifier, create a GUID for your application (see the section about Handling user data). Or, rather than using external storage (which requires permission), 
+
+			Store data on the internal storage.
+
+		In addition to requesting permissions, your application can use the <permission> element to protect IPC that is security sensitive and is exposed to other applications, such as a ContentProvider.
+
+			In general, we recommend using access controls other than user confirmed permissions where possible because permissions can be confusing for users. 
+
+				For Example, 
+				consider using the signature protection level on permissions for IPC communication between applications provided by a single developer.
+
+		Do not leak permission-protected data. 
+			This occurs when your app exposes data over IPC that is available only because your app has permission to access that data. 
+
+			The clients of your app's IPC interface may not have that same data-access permission. 
+
+			More details on the frequency and potential effects of this issue appear in the research paper Permission Re-Delegation: Attacks and Defenses , published at USENIX.
+
+	Create permissions
+	------------------
+	Generally, you should strive to define as few permissions as possible while satisfying your security requirements. 
+
+		Creating a new permission is relatively uncommon for most applications, because the system-defined permissions cover many situations. Where appropriate, perform access checks using existing permissions.
+
+		If you must create a new permission, consider whether you can accomplish your task with a signature protection level.
+
+		 Signature permissions are transparent to the user and allow access only by applications signed by the same developer as the application performing the permission check. 
+
+		 If the new permission is still required, it's declared in the app manifest using the <permission> element. 
+
+		 Apps that wish to use the new permission can reference it by each adding a <uses-permission> element in their respective manifest files. 
+
+		 You can also add permissions dynamically by using the addPermission() method.
+
+	If you create a permission with the dangerous protection level, there are a number of complexities that you need to consider:
+
+		The permission must have a string that concisely expresses to a user the security decision they are required to make.
+
+		The permission string must be localized to many different languages.
+
+		Users may choose not to install an application because a permission is confusing or perceived as risky.
+
+		Applications may request the permission when the creator of the permission has not been installed.
+
+		Each of these poses a significant nontechnical challenge for you as the developer while also confusing your users, which is why we discourages the use of the dangerous permission level.
+
+______________________________________________
+android:protectionLevel
+______________________________________________
+Characterizes the potential risk implied in the permission and indicates the procedure the system should follow when determining whether or not to grant the permission to an application requesting it.
+
+Each protection level consists of a base permission type and zero or more flags. For example, the "dangerous" protection level has no flags. In contrast, the protection level "signature|privileged" is a combination of the "signature" base permission type and the "privileged" flag.
+
+The following table shows all base permission types. For a list of flags, see protectionLevel.
+
+
+	"normal"
+	--------
+	The default value. A lower-risk permission that gives requesting applications access to isolated application-level features, with minimal risk to other applications, the system, or the user. 
+
+	The system automatically grants this type of permission to a requesting application at installation, without asking for the user's explicit approval (though the user always has the option to review these permissions before installing).
+
+
+	"dangerous"	
+	-----------
+	A higher-risk permission that would give a requesting application access to private user data or control over the device that can negatively impact the user.
+
+	 Because this type of permission introduces potential risk, the system may not automatically grant it to the requesting application. 
+
+	 For example, any dangerous permissions requested by an application may be displayed to the user and require confirmation before proceeding, or some other approach may be taken to avoid the user automatically allowing the use of such facilities.
+
+	"signature"	
+	-----------
+	 A permission that the system grants only if the requesting application is signed with the same certificate as the application that declared the permission. 
+
+	 If the certificates match, the system automatically grants the permission without notifying the user or asking for the user's explicit approval.
+
+
+	"signatureOrSystem"	
+	-------------------
+	Old synonym for "signature|privileged". Deprecated in API level 23.
+
+	A permission that the system grants only to applications that are in a dedicated folder on the Android system image or that are signed with the same certificate as the application that declared the permission. 
+
+	Avoid using this option, as the signature protection level should be sufficient for most needs and works regardless of exactly where apps are installed. 
+
+	The "signatureOrSystem" permission is used for certain special situations where multiple vendors have applications built into a system image and need to share specific features explicitly because they are being built together.
+
+
+
 
