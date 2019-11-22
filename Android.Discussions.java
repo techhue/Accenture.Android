@@ -96,7 +96,41 @@ Day 6:
 Day 7:
 	https://developer.android.com/guide/components/services
 
+Day 8:
+	https://developer.android.com/guide/topics/providers/content-provider-basics
+	https://developer.android.com/guide/topics/providers/content-provider-creating
 
+Day 9:
+	https://developer.android.com/guide/components/processes-and-threads
+
+	Operating Systems: Internals and Design Principles
+		by William Stallin
+		Read: Chapter 3 - Process Description and Control
+Day 10:
+	https://developer.android.com/training/articles/security-tips
+	
+	Operating Systems: Internals and Design Principles
+		by William Stallin
+		Read: Chapter 4 - Threds
+
+
+______________________________________________
+Career Advice : Master Fundamentals
+______________________________________________
+
+	Programming In C, 2nd Edition,
+		By Kernigham and Denish Ritchie
+		Must Read: All Chapters
+	
+	Operating Systems: Internals and Design Principles
+		by William Stallin
+		Must Read: Chapter 1 to Chapter 7
+
+	Data Structures and Program Design in C++
+		By Kruse and Tondo
+		Must Read: All Chapters
+
+______________________________________________
 Android Application Architecture
 ___________________________________________
 1. Multiprocess Architecture
@@ -727,5 +761,129 @@ ______________________________________________
 	A contract class defines constants that help applications work with the content URIs, column names, intent actions, and other features of a content provider. 
 
 	Contract classes are not included automatically with a provider; the provider's developer has to define them and then make them available to other developers. Many of the providers included with the Android platform have corresponding contract classes in the package android.provider.
+______________________________________________
+Android Process Architecture
+______________________________________________
+ 
+ 	Setting up a new Linux process and the runtime is not an instantaneous operation. It can degrade performance and have a noticeable impact on the user experience.
 
+ 	The system tries to shorten the startup time for Android applications by starting a special process called Zygote on system boot. Zygote has the entire set of core libraries preloaded. 
+
+ 	New application processes are forked from the Zygote process without copying the core libraries, which are shared across all applications.
+
+
+
+Android Application Termination 
+______________________________________________
+
+	A process is created at the start of the application and finishes when the system wants to free up resources. 
+
+	Because a user may request an application at any later time, the runtime avoids destroying all its resources until the number of live applications leads to an actual shortage of resources across the system. Hence, an application isn’t auto‐ matically terminated even when all of its components have been destroyed.
+
+	When the system is low on resources, it’s up to the runtime to decide which process should be killed. To make this decision, the system imposes a ranking on each process depending on the application’s visibility and the components that are currently executing. 
+
+	In the following ranking, the bottom-ranked processes are forced to quit before the higher-ranked ones. 
+
+	With the highest first, the process ranks(Buckets) are:
+
+	Foreground Bucket
+		Application has a visible component in front, Service is bound to an Activity in front in a remote process, or BroadcastReceiver is running.
+	
+	Visible Bucket
+		Application has a visible component but is partly obscured.
+	
+	Service Bucket
+		Service is executing in the background and is not tied to a visible component.
+	
+	Background Bucket
+		A nonvisible Activity. This is the process level that contains most applications.
+	
+	Empty Bucket
+		A process without active components. Empty processes are kept around to improve startup times, but they are the first to be terminated when the system reclaims resources.
+
+______________________________________________
+Processes and Threads in Android
+______________________________________________
+
+	When an application component starts and the application does not have any other components running, the Android system starts a new Linux process for the application with a single thread of execution. 
+
+		Process Name will be "Manifest Level PackageName"
+
+	By default, all components of the same application run in the same process and thread (called the "main" thread). 
+
+		If an application component starts and there already exists a process for that application (because another component from the application exists), then the component is started within that process and uses the same thread of execution. 
+
+		android:process="Manifest Level PackageName"
+	
+	However, you can arrange for different components in your application to run in separate processes, and you can create additional threads for any process.
+
+		android:process="PackageName"
+
+
+BEST PRACTICES:
+	By default, all components of the same application run in the same process and most applications should not change this.
+
+
+	The manifest entry for each type of component element—<activity>, <service>, <receiver>, and <provider>—supports an 
+			android:process="PackageName" attribute
+
+	You can also set android:process so that components of different applications run in the same process.
+
+		Provided that the applications share the same Linux user ID and are signed with the same certificates.
+
+	The <application> element also supports an android:process attribute, to set a default value that applies to all components.
+
+	SANDBOXING: First Model of Security
+		Process is Sandbox at OS level
+		You Can't Read/Write Outside of Process
+			means Process Address Space
+
+______________________________________________
+Process Killability In Android
+______________________________________________
+
+	Android might decide to shut down a process at some point, when memory is low and required by other processes that are more immediately serving the user. Application components running in the process that's killed are consequently destroyed. A process is started again for those components when there's again work for them to do.
+
+	When deciding which processes to kill, the Android system weighs their relative importance to the user. For example, it more readily shuts down a process hosting activities that are no longer visible on screen, compared to a process hosting visible activities. The decision whether to terminate a process, therefore, depends on the state of the components running in that process.
+
+
+	1. A foreground process is one that is required for what the user is currently doing. Various application components can cause its containing process to be considered foreground in different ways. A process is considered to be in the foreground if any of the following conditions hold:
+		
+		It is running an Activity at the top of the screen that the user is interacting with (its onResume() method has been called).
+		
+		It has a BroadcastReceiver that is currently running (its BroadcastReceiver.onReceive() method is executing).
+		
+		It has a Service that is currently executing code in one of its callbacks (Service.onCreate(), Service.onStart(), or Service.onDestroy()).
+
+
+		There will only ever be a few such processes in the system, and these will only be killed as a last resort if memory is so low that not even these processes can continue to run. Generally, at this point, the device has reached a memory paging state, so this action is required in order to keep the user interface responsive.
+
+
+	2. A visible process is doing work that the user is currently aware of, so killing it would have a noticeable negative impact on the user experience. A process is considered visible in the following conditions:
+		
+		It is running an Activity that is visible to the user on-screen but not in the foreground (its onPause() method has been called). This may occur, for example, if the foreground Activity is displayed as a dialog that allows the previous Activity to be seen behind it.
+		
+		It has a Service that is running as a foreground service, through Service.startForeground() (which is asking the system to treat the service as something the user is aware of, or essentially visible to them).
+		
+		It is hosting a service that the system is using for a particular feature that the user is aware, such as a live wallpaper, input method service, etc.
+
+		
+		The number of these processes running in the system is less bounded than foreground processes, but still relatively controlled. These processes are considered extremely important and will not be killed unless doing so is required to keep all foreground processes running.
+
+
+	3. A service process is one holding a Service that has been started with the startService() method. Though these processes are not directly visible to the user, they are generally doing things that the user cares about (such as background network data upload or download), so the system will always keep such processes running unless there is not enough memory to retain all foreground and visible processes.
+		
+		Services that have been running for a long time (such as 30 minutes or more) may be demoted in importance to allow their process to drop to the cached LRU list described next.
+
+			This helps avoid situations where very long running services with memory leaks or other problems consume so much RAM that they prevent the system from making effective use of cached processes.
+
+	4. A cached process is one that is not currently needed, so the system is free to kill it as desired when memory is needed elsewhere. In a normally behaving system, these are the only processes involved in memory management: a well running system will have multiple cached processes always available (for more efficient switching between applications) and regularly kill the oldest ones as needed. Only in very critical (and undesireable) situations will the system get to a point where all cached processes are killed and it must start killing service processes.
+
+		These processes often hold one or more Activity instances that are not currently visible to the user (the onStop() method has been called and returned). Provided they implement their Activity life-cycle correctly (see Activity for more details), when the system kills such processes it will not impact the user's experience when returning to that app: it can restore the previously saved state when the associated activity is recreated in a new process.
+
+		These processes are kept in a pseudo-LRU list, where the last process on the list is the first killed to reclaim memory. The exact policy of ordering on this list is an implementation detail of the platform, but generally it will try to keep more useful processes (one hosting the user's home application, the last activity they saw, etc) before other types of processes. Other policies for killing processes may also be applied: hard limits on the number of processes allowed, limits on the amount of time a process can stay continually cached, etc.
+
+	When deciding how to classify a process, the system will base its decision on the most important level found among all the components currently active in the process. See the Activity, Service, and BroadcastReceiver documentation for more detail on how each of these components contribute to the overall life-cycle of a process. The documentation for each of these classes describes in more detail how they impact the overall life-cycle of their application.
+
+	A process's priority may also be increased based on other dependencies a process has to it. For example, if process A has bound to a Service with the Context.BIND_AUTO_CREATE flag or is using a ContentProvider in process B, then process B's classification will always be at least as important as process A's.
 
